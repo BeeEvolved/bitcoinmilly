@@ -1,12 +1,1079 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hello, World!</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Dashboard tracking Bitcoin's progress towards $1,000,000.">
+<meta name="theme-color" content="#fff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="index,follow">
+<meta property="og:url" content="https://bitcoinmilly.com">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Bitcoin to 1 Milly">
+<meta property="og:description" content="Dashboard tracking Bitcoin's progress towards $1,000,000.">
+<meta property="og:site_name" content="bitcoinmilly.com">
+<link rel="canonical" href="https://bitcoinmilly.com">
+<link rel="preconnect" href="https://api.coinbase.com" crossorigin>
+<link rel="preconnect" href="https://api.exchange.coinbase.com" crossorigin>
+<link rel="preconnect" href="https://ws-feed.exchange.coinbase.com" crossorigin>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>" type="image/svg+xml">
+<title>Bitcoin to 1 Milly — live progress to $1,000,000</title>
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "WebApplication",
+ "name": "Bitcoin to 1 Milly",
+ "description": "Dashboard tracking Bitcoin's progress towards $1,000,000.",
+ "url": "https://bitcoinmilly.com",
+ "applicationCategory": "FinanceApplication",
+ "operatingSystem": "All"
+}
+</script>
+<style>
+ :root[data-theme="dark"]{ --bg:#000; --card:#0b0b0b; --panel:#0a0a0a; --text:#e9eef5; --muted:#9aa7b5; --border:#1a1a1a; --accent:#9ab7ff; --good:#22c55e; --bad:#ff5a5a; --color-price: var(--accent); --color-sma: #a0a0a0; --color-sma-long: #c8c8c8; --color-bb-upper: green; --color-bb-lower: red; --color-bb-middle: yellow; --color-rsi: orange; }
+ :root[data-theme="light"]{ --bg:#fff; --card:#fff; --panel:#f6f7f9; --text:#0b0b0b; --muted:#606770; --border:#e5e7eb; --accent:#00b3ff; --good:#22c55e; --bad:#ef4444; --color-price: var(--accent); --color-sma: #606060; --color-sma-long: #808080; --color-bb-upper: darkgreen; --color-bb-lower: darkred; --color-bb-middle: goldenrod; --color-rsi: darkorange; }
+ :root[data-theme="brainrot"]{ --bg:#050505; --card:#0a0a0a; --panel:#0a0a0a; --text:#f7f7ff; --muted:#a7a7c7; --border:#161616; --accent:#00ffe1; --good:#00ff84; --bad:#ff4d9a; --color-price: var(--accent); --color-sma: #a0a0a0; --color-sma-long: #c8c8c8; --color-bb-upper: green; --color-bb-lower: red; --color-bb-middle: yellow; --color-rsi: orange; }
+ *{box-sizing:border-box} html,body{height:100%} body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+ header{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--border);background:var(--bg)}
+ .wrap{max-width:1100px;margin:0 auto;padding:12px 16px}
+ .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+ select,button,input{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:8px 10px;cursor:pointer;transition:background 0.2s, transform 0.1s}
+ button:hover{transform:scale(1.02)}
+ button.primary{background:var(--accent);border:none;color:#000;font-weight:700}
+ button{user-select:none}
+ .grid{display:grid;gap:12px}
+ .kpis{display:grid;gap:10px;grid-template-columns:repeat(3,minmax(0,1fr))}
+ .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;transition:box-shadow 0.2s}
+ .card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+ .label{font-size:12px;color:var(--muted)} .value{font-size:24px;margin-top:6px}
+ .muted{color:var(--muted)}
+ .progress{height:12px;background:var(--panel);border:1px solid var(--border);border-radius:999px;overflow:hidden}
+ .progress>div{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--good));transition:width .3s ease}
+ .two{display:grid;gap:12px;grid-template-columns:1fr} @media(min-width:1024px){.two{grid-template-columns:2fr 1fr}}
+ canvas{width:100%;height:280px;transition:opacity 0.3s}
+ .timeline{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;padding-right:8px}
+ .pill{border:1px solid var(--border);border-radius:999px;color:var(--muted);padding:2px 8px;font-size:12px;transition:background 0.2s}
+ .status-good{border-color: var(--good); color: var(--good);}
+ .status-bad{border-color: var(--bad); color: var(--bad);}
+ .skeleton{position:relative;background:var(--panel);border-radius:8px;height:18px;animation:pulse 1.5s infinite}
+ .shimmer::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent);transform:translateX(-100%);animation:sh 1.2s infinite}
+ @keyframes sh{to{transform:translateX(100%)}}
+ .thinbar{position:fixed;left:0;top:0;height:3px;background:var(--accent);width:0%;transition:width .2s;z-index:9}
+ footer{color:var(--muted);font-size:12px;text-align:center;padding:16px}
+ 
+ @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+ 
+ :root[data-theme="brainrot"] .card { transition: transform 0.2s, box-shadow 0.3s; box-shadow: 0 0 10px #ff00ff; }
+ :root[data-theme="brainrot"] .card:hover { transform: scale(1.05) rotate(1deg); box-shadow: 0 0 20px #00ff00; }
+ :root[data-theme="brainrot"] .value { text-shadow: 0 0 5px var(--accent); animation: glow 1.5s infinite; }
+ @keyframes glow { 0% { text-shadow: 0 0 5px var(--accent); } 50% { text-shadow: 0 0 15px var(--good), 0 0 25px var(--bad); } 100% { text-shadow: 0 0 5px var(--accent); } }
+ :root[data-theme="brainrot"] .pill { animation: wiggle 0.5s infinite; }
+ @keyframes wiggle { 0% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } 100% { transform: rotate(-2deg); } }
+ :root[data-theme="brainrot"] button.primary { animation: pulse 1s infinite; }
+ 
+ .error { color: var(--bad); font-size: 14px; margin-top: 4px; }
+
+ .disclaimer-link { cursor: pointer; text-decoration: underline; }
+ 
+ .info-icon { cursor: help; color: var(--muted); font-size: 12px; margin-left: 4px; position: relative; }
+ .info-icon:focus::after { content: attr(title); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--panel); color: var(--text); padding: 4px 8px; border-radius: 4px; white-space: nowrap; z-index: 10; }
+ 
+ .feature { margin-bottom: 20px; }
+ .feature h2 { font-size: 20px; margin-bottom: 8px; }
+ .feature p { font-size: 14px; color: var(--muted); }
+ @media (prefers-reduced-motion: reduce) {
+   * {
+     animation-duration: 0s !important;
+     transition-duration: 0s !important;
+   }
+ }
+</style>
 </head>
 <body>
-  <h1>Hello, World!</h1>
-  <p>It works 🎉</p>
+<noscript>Please enable JavaScript to use this dashboard.</noscript>
+<div id="toast" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--panel); color:var(--text); padding:8px 16px; border-radius:8px; display:none; z-index:30;"></div>
+<div id="bar" class="thinbar"></div>
+<header>
+ <div class="wrap">
+   <div class="row" style="justify-content:space-between">
+     <div class="row"><span>🚀</span><strong id="titleMain">Bitcoin to 1 Milly<span class="info-icon" tabindex="0" title="Dashboard tracking Bitcoin's progress towards $1,000,000.">ℹ</span></strong><span id="athNow" class="pill">ATH — —<span class="info-icon" tabindex="0" title="Current all-time high price and date.">ℹ</span></span></div>
+     <div class="row">
+       <label class="muted" for="theme">Theme<span class="info-icon" tabindex="0" title="Change the visual theme of the dashboard.">ℹ</span></label>
+       <select id="theme">
+         <option value="light">Light</option>
+         <option value="dark" selected>Dark</option>
+         <option value="brainrot">Brainrot 🧠⚡</option>
+       </select>
+       <button id="refreshBtn" type="button" class="primary" style="font-size:12px">Refresh<span class="info-icon" tabindex="0" title="Refresh data and clear cache.">ℹ</span></button>
+       <button id="docBtn" type="button" aria-controls="docModal">Doc</button>
+     </div>
+   </div>
+ </div>
+</header>
+<main class="wrap grid">
+ 
+ <section class="kpis">
+   <div class="card"><div class="label" id="lblPrice">BTC/USD (live)<span class="info-icon" tabindex="0" title="The current real-time price of Bitcoin in US Dollars, sourced from Coinbase.">ℹ</span></div><div id="kpiPrice" class="value skeleton shimmer" aria-live="polite"></div><div id="kpiSrc" class="muted skeleton shimmer" style="height:14px;margin-top:6px;width:60%"></div><div id="priceError" class="error" style="display:none"></div></div>
+   <div class="card"><div class="label" id="lblPct">% to $1,000,000<span class="info-icon" tabindex="0" title="The percentage progress towards Bitcoin reaching $1,000,000 per coin based on the current price.">ℹ</span></div><div id="kpiPct" class="value skeleton shimmer" aria-live="polite"></div><div id="progressBar1" class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0%" aria-label="% to $1,000,000 progress" style="margin-top:6px"><div id="progressFill"></div></div></div>
+   <div class="card"><div class="label" id="lblTrend">Trend (SMA50 vs SMA200)<span class="info-icon" tabindex="0" title="Compares the 50-day Simple Moving Average (SMA) and 200-day SMA to see if the trend is upward (Golden Cross) or downward (Death Cross).">ℹ</span></div><div id="kpiTrend" class="value skeleton shimmer" aria-live="polite"></div><div class="muted" id="lblVol">Vol (30D ann., daily closes)<span class="info-icon" tabindex="0" title="Annualized volatility over the last 30 days, showing how much the price fluctuates.">ℹ</span></div><div class="muted" id="lblRSI">RSI (14D)<span class="info-icon" tabindex="0" title="Relative Strength Index over 14 days, helps spot if Bitcoin is overbought (above 70) or oversold (below 30).">ℹ</span></div></div>
+ </section>
+ <section class="card">
+   <div class="two">
+     <div id="chartArea">
+       <div class="row" style="justify-content:space-between"><strong id="hdrPrice">Price (close) + SMA50/SMA200<span class="info-icon" tabindex="0" title="Chart showing Bitcoin's closing prices with 50-day and 200-day Simple Moving Averages overlaid.">ℹ</span></strong><span id="chartMeta" class="muted" aria-live="polite">—</span></div>
+       <div class="skeleton shimmer" style="height:8px;margin:10px 0;display:none" id="chartLoader"></div>
+       <canvas id="priceCanvas" height="280" aria-label="Price line with SMA50/SMA200" aria-hidden="true"></canvas>
+       <div class="row" style="justify-content:space-between;margin-top:10px"><strong id="hdrVol">Volume<span class="info-icon" tabindex="0" title="Trading volume bars showing how much Bitcoin was traded over time.">ℹ</span></strong><span id="volMeta" class="muted">—</span></div>
+       <canvas id="volCanvas" height="120" aria-label="Volume bars" aria-hidden="true"></canvas>
+     </div>
+     <div>
+       <div class="card" style="margin-top:10px">
+         <div class="row" style="justify-content:space-between"><strong id="hdrProgress">Progress to $1,000,000<span class="info-icon" tabindex="0" title="Visual progress bar from $0 to $1,000,000 based on current Bitcoin price.">ℹ</span></strong><span id="hdrProgressSub" class="muted">$0 → $1,000,000</span></div>
+         <div id="progressBar2" class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0%" aria-label="Progress to $1,000,000" style="margin-top:8px"><div id="progressFill2"></div></div>
+       </div>
+       <div class="card" style="margin-top:10px">
+         <div class="row" style="justify-content:space-between"><strong id="hdrProbIndex">$1M Market Conditions Index<span class="info-icon" tabindex="0" title="Normalized score (0–100) of market favorability for BTC to $1M in each time horizon. This is an experimental heuristic metric created for this dashboard, not a standard indicator.">ℹ</span></strong><span id="probIndexMeta" class="muted">—</span></div>
+         <span class="muted">Composite score; not a forecast or probability.</span>
+         <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px">
+           <div class="card"><div class="label" id="lbl1D">1D</div><div id="prob1D" class="value skeleton shimmer"></div></div>
+           <div class="card"><div class="label" id="lbl1W">1W</div><div id="prob1W" class="value skeleton shimmer"></div></div>
+           <div class="card"><div class="label" id="lbl1M">1M</div><div id="prob1M" class="value skeleton shimmer"></div></div>
+           <div class="card"><div class="label" id="lbl1Y">1Y</div><div id="prob1Y" class="value skeleton shimmer"></div></div>
+         </div>
+         <button id="runProbIndex" type="button" class="primary" style="margin-top:8px;width:100%">Compute Index</button>
+         <div id="probIndexError" class="error" style="display:none"></div>
+       </div>
+       <div class="card" style="margin-top:10px">
+         <div class="row" style="justify-content:space-between"><strong id="hdrATH">ATH Milestones<span class="info-icon" tabindex="0" title="List of Bitcoin's all-time high prices and the dates they occurred, from Coinbase data.">ℹ</span></strong><span id="hdrATHSub" class="muted">from Coinbase</span></div>
+         <div id="timeline" class="timeline" style="margin-top:8px"></div>
+         <div id="athError" class="error" style="display:none"></div>
+       </div>
+       <div class="card" style="margin-top:10px;text-align:center">
+         <button id="coffeeBtn" type="button" class="primary" style="width:100%;font-size:18px">Buy me a coffee ☕<span class="info-icon" tabindex="0" title="Support the developer by sending BTC.">ℹ</span></button>
+         <div id="coffeeHint" class="muted" style="margin-top:6px">Tap to open BTC address</div>
+       </div>
+       <div class="card" style="margin-top:10px;text-align:center">
+         <button id="exportBtn" type="button" class="primary" style="width:100%;font-size:18px" title="Export chart data as CSV">Export Data 📊<span class="info-icon" tabindex="0" title="Download the current chart data as a CSV file.">ℹ</span></button>
+       </div>
+     </div>
+   </div>
+ </section>
+ <footer><span id="footerCopy">Data: Coinbase • Info only.<span class="info-icon" tabindex="0" title="Data sourced from Coinbase API for informational purposes only.">ℹ</span></span> <button id="disclaimerLink" class="disclaimer-link" type="button">Not Financial Advice<span class="info-icon" tabindex="0" title="Click for full disclaimer.">ℹ</span></button></footer>
+</main>
+
+<div id="coffeeModal" role="dialog" aria-modal="true" aria-labelledby="coffeeTitle" style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:20">
+ <div class="card" style="width:min(480px,92vw)">
+   <div class="row" style="justify-content:space-between"><strong id="coffeeTitle">Buy me a coffee (BTC)</strong><button id="closeModal" type="button">✕</button></div>
+   <p class="muted" style="margin-top:6px" id="coffeeMsg">Tap to copy.</p>
+   <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+     <code id="btcAddr" style="word-break:break-all">3NPX98274FrYd6HnVKkERBZQ5dpzKdWHnL</code>
+     <button id="copyAddr" type="button" class="primary">Copy</button>
+   </div>
+ </div>
+</div>
+
+<div id="disclaimerModal" role="dialog" aria-modal="true" aria-labelledby="disclaimerTitle" style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:20">
+ <div class="card" style="width:min(600px,92vw); max-height:80vh; overflow:auto">
+   <div class="row" style="justify-content:space-between"><strong id="disclaimerTitle">Legal Disclaimer</strong><button id="closeDisclaimer" type="button">✕</button></div>
+   <p style="margin-top:12px">This dashboard is provided for entertainment and informational purposes only. It is not intended to be, and should not be construed as, financial, investment, or other advice of any kind. Cryptocurrency investments are highly volatile, speculative, and involve a significant risk of loss. Past performance is not indicative of future results.</p>
+   <p>We do not recommend that any cryptocurrency be bought, sold, or held by you. Always conduct your own due diligence and consult with a qualified financial advisor before making any investment decisions. The creators and maintainers of this dashboard assume no responsibility or liability for any errors, omissions, or losses incurred as a result of using this tool.</p>
+   <p>This is all in good fun – DYOR (Do Your Own Research) and invest responsibly!</p>
+   <p>Technical indicators are implemented using standard TA formulas; the $1M Market Conditions Index is an experimental heuristic metric created for this dashboard.</p>
+ </div>
+</div>
+
+<div id="docModal" role="dialog" aria-modal="true" aria-labelledby="docTitle" style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:20">
+ <div class="card" style="width:min(800px,92vw); max-height:80vh; overflow:auto">
+   <div class="row" style="justify-content:space-between"><strong id="docTitle">Dashboard Features Explained</strong><button id="closeDoc" type="button">✕</button></div>
+   <div class="feature" style="margin-top:12px">
+     <h2 style="font-size:20px;margin-bottom:8px">BTC/USD Price</h2>
+     <p id="expPrice" style="font-size:14px;color:var(--muted)"></p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">% to $1,000,000</h2>
+     <p id="expPct" style="font-size:14px;color:var(--muted)"></p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">Trend (SMA50 vs SMA200)</h2>
+     <p id="expTrend" style="font-size:14px;color:var(--muted)">Trend orientation only (Golden/Death Cross), not a timing signal.</p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">Vol (30D ann., daily closes)</h2>
+     <p id="expVol" style="font-size:14px;color:var(--muted)">Computed from the last 30 daily log returns, annualized by √365, and shown as %.</p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">RSI (14D)</h2>
+     <p id="expRSI" style="font-size:14px;color:var(--muted)">Wilder’s smoothing (14-period) using average gains/losses.</p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">Price Chart with SMA50/SMA200</h2>
+     <p id="expPriceChart" style="font-size:14px;color:var(--muted)"></p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">Volume Chart</h2>
+     <p id="expVolChart" style="font-size:14px;color:var(--muted)"></p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">Progress to $1,000,000 Bar</h2>
+     <p id="expProgress" style="font-size:14px;color:var(--muted)"></p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">$1M Market Conditions Index</h2>
+     <p id="expProbIndex" style="font-size:14px;color:var(--muted)">This is a normalized composite of order-book balance, recent trade flow, volume momentum, ATR ratio, and a trend t-statistic. It’s not a forecast. Inputs: near-mid order-book imbalance, recent buy/sell flow ratio, volume EMAs (5/20), ATR(14)/ATR(50) ratio, and a 30-bar trend t-statistic; normalized and weighted per horizon.</p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">ATH Milestones</h2>
+     <p id="expATH" style="font-size:14px;color:var(--muted)">ATHs are from Coinbase BTC-USD; other venues may differ.</p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">Refresh Button</h2>
+     <p id="expRefresh" style="font-size:14px;color:var(--muted)"></p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">Theme Selector</h2>
+     <p id="expTheme" style="font-size:14px;color:var(--muted)"></p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">Buy Me a Coffee</h2>
+     <p id="expCoffee" style="font-size:14px;color:var(--muted)"></p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">Export Data</h2>
+     <p id="expExport" style="font-size:14px;color:var(--muted)"></p>
+   </div>
+   <div class="feature">
+     <h2 style="font-size:20px;margin-bottom:8px">Disclaimer</h2>
+     <p id="expDisclaimer" style="font-size:14px;color:var(--muted)"></p>
+   </div>
+ </div>
+</div>
+
+<div id="chartTooltip" role="tooltip" style="position:absolute;background:var(--panel);color:var(--text);padding:8px;border-radius:8px;border:1px solid var(--border);display:none;z-index:10;pointer-events:none;" aria-hidden="true"></div>
+<script>
+
+const BTC_ADDRESS = '3NPX98274FrYd6HnVKkERBZQ5dpzKdWHnL';
+const MILLION = 1_000_000;
+const COINBASE_SPOT = 'https://api.coinbase.com/v2/prices/BTC-USD/spot';
+const COINBASE_EXCHANGE = 'https://api.exchange.coinbase.com';
+const WS_ENDPOINT = 'wss://ws-feed.exchange.coinbase.com';
+const CACHE_TTL = 3600000; // 1 hour in ms
+const ATH_CACHE_TTL = 86400000; // 24 hours in ms
+const $ = id => document.getElementById(id);
+const root = document.documentElement;
+
+const normalCopy = {
+ titleMain:"Bitcoin to 1 Milly",
+ coffeeBtn:"Buy me a coffee ☕", coffeeTitle:"Buy me a coffee (BTC)", coffeeMsg:"Tap to copy.", coffeeHint:"Tap to open BTC address",
+ lblPrice:"BTC/USD (live)", lblPct:"% to $1,000,000",
+ hdrPrice:"Price (close) + SMA50/SMA200", hdrVol:"Volume",
+ hdrProgress:"Progress to $1,000,000", hdrATH:"ATH Milestones",
+ hdrProbIndex:"$1M Market Conditions Index",
+ footerCopy:"Data: Coinbase • Info only."
+};
+const brainCopy = {
+ titleMain:"Bitcoin to 1 Milly Go Brrr 🤑💥💀",
+ coffeeBtn:"Yeet Bean Juice ☕️ Fr Fr No Cap Ong", coffeeTitle:"Yeet Bean Juice (BTC) 🔥🤑", coffeeMsg:"Tap 2 Copy — Absolute Sigma Rizzler ❤️‍🔥💯", coffeeHint:"Tap 4 Wallet Glow Up 📈",
+ lblPrice:"BTC/USD (Right Meow Lit AF) 😼🔥", lblPct:"% to Absolute Milly Vibes 🤑",
+ hdrPrice:"Price Squiggle + Vibey Lines 📈💥", hdrVol:"Thicc Volume Bars 🤑📊",
+ hdrProgress:"Grind to Milly (We Up? 🚀)", hdrATH:"Epic ATH Glow Ups ✨🧻",
+ hdrProbIndex:"Milly Hit Odds 💥🤑",
+ footerCopy:"Not Financial Advice, Just Peak Brainrot. DYOR or NGMI. 🧠💀🤡"
+};
+const normalDocs = {
+ expPrice: "Displays the current live price of Bitcoin in USD, fetched from Coinbase.",
+ expPct: "Shows the percentage progress towards Bitcoin reaching $1,000,000.",
+ expTrend: "Compares SMA50 and SMA200 to indicate if the trend is up (Golden Cross) or down (Death Cross). Trend orientation only (Golden/Death Cross), not a timing signal.",
+ expVol: "Annualized volatility over the last 30 days (30D ann., daily closes). Computed from the last 30 daily log returns, annualized by √365, and shown as %.",
+ expRSI: "Relative Strength Index over 14 days (14D) to gauge overbought/oversold conditions. Wilder’s smoothing (14-period) using average gains/losses.",
+ expPriceChart: "Line chart of closing prices with SMA50 and SMA200 overlays.",
+ expVolChart: "Bar chart of trading volume.",
+ expProgress: "Progress bar visualizing the journey to $1M.",
+ expProbIndex: "This is a normalized composite of order-book balance, recent trade flow, volume momentum, ATR ratio, and a trend t-statistic. It’s not a forecast. Inputs: near-mid order-book imbalance, recent buy/sell flow ratio, volume EMAs (5/20), ATR(14)/ATR(50) ratio, and a 30-bar trend t-statistic; normalized and weighted per horizon.",
+ expATH: "List of all-time high milestones with dates and prices. ATHs are from Coinbase BTC-USD; other venues may differ.",
+ expRefresh: "Refreshes all data and clears cache.",
+ expTheme: "Changes the visual theme of the dashboard.",
+ expCoffee: "Support the creator by sending BTC.",
+ expExport: "Download chart data as CSV.",
+ expDisclaimer: "Important legal note: This is for info/entertainment only, not advice."
+};
+const brainDocs = {
+ expPrice: "Live BTC price go brrr in USD, straight from Coinbase vibes 😼🔥",
+ expPct: "% grind to absolute milly status 🤑📈",
+ expTrend: "SMA50 vs SMA200 battle: Golden Cross = Up Only 🚀, Death Cross = Down Bad 💀. Trend orientation only (Golden/Death Cross), not a timing signal.",
+ expVol: "How wild the price swings been last 30 days (30D ann.), annualized for max chaos 💥. Computed from the last 30 daily log returns, annualized by √365, and shown as %.",
+ expRSI: "RSI check over 14 days (14D): Over 70 = Pumped AF (sell?), Under 30 = Oversold (buy dip?) 🤔. Wilder’s smoothing (14-period) using average gains/losses.",
+ expPriceChart: "Squiggly price line with vibey SMA50/SMA200 overlays 📊💥",
+ expVolChart: "Thicc bars of trading action 🤑📉",
+ expProgress: "Bar filling up to milly like a boss 🚀🤑",
+ expProbIndex: "Odds score (0-100) on hitting milly in 1D/1W/1M/1Y — Bet? 💀🧻 This is an experimental heuristic metric created for this dashboard. This is a normalized composite of order-book balance, recent trade flow, volume momentum, ATR ratio, and a trend t-statistic. It’s not a forecast. Inputs: near-mid order-book imbalance, recent buy/sell flow ratio, volume EMAs (5/20), ATR(14)/ATR(50) ratio, and a 30-bar trend t-statistic; normalized and weighted per horizon.",
+ expATH: "Epic ATH peaks with dates — Skibidi highs Ong ✨💥. ATHs are from Coinbase BTC-USD; other venues may differ.",
+ expRefresh: "Smash to reload everything and nuke cache Fr Fr 🔄💀",
+ expTheme: "Vibe switch: Light/Dark normie, Brainrot sigma 🧠⚡, Advanced chad 📈",
+ expCoffee: "Yeet BTC for bean juice support Ong ☕❤️‍🔥",
+ expExport: "Dump chart data as CSV for your spreadsheets 📊🤑",
+ expDisclaimer: "Not advice, just brainrot fun — DYOR or NGMI 🤡💀"
+};
+const savedTheme = localStorage.getItem('theme') || 'dark';
+root.setAttribute('data-theme', savedTheme);
+$('theme').value = savedTheme;
+$('theme').addEventListener('change', e=>{
+ const v = e.target.value;
+ root.setAttribute('data-theme', v);
+ localStorage.setItem('theme', v);
+ setCopy(v);
+ setDocs(v);
+});
+function setCopy(theme){
+ let selectedCopy = normalCopy;
+ if(theme === 'brainrot'){
+   selectedCopy = brainCopy;
+ }
+ const ids = ["titleMain","coffeeBtn","coffeeTitle","coffeeMsg","coffeeHint","footerCopy",
+              "lblPrice","lblPct","hdrPrice","hdrVol","hdrProgress","hdrATH","hdrProbIndex"];
+ ids.forEach(k=>{ const el=$(k); if(el && selectedCopy[k]) el.textContent = selectedCopy[k]; });
+}
+function setDocs(theme){
+ let selectedDocs = normalDocs;
+ if(theme === 'brainrot'){
+   selectedDocs = brainDocs;
+ }
+ Object.keys(selectedDocs).forEach(k=>{ const el=$(k); if(el) el.textContent = selectedDocs[k]; });
+}
+
+const bar = $('bar');
+const step = p => bar.style.width = Math.min(100, Math.max(0,p)) + '%';
+const timeoutFetch = (url, ms=10000) => {
+ const c = new AbortController(); const t = setTimeout(()=>c.abort(), ms);
+ return fetch(url, {signal:c.signal}).finally(()=>clearTimeout(t));
+};
+const fmtUSD = n => n==null ? '—' : (n>=1000 ? n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0}) : n.toLocaleString(undefined,{style:'currency',currency:'USD'}));
+const fmtPct = (x,d=2)=> isFinite(x) ? x.toFixed(d)+'%' : '—';
+function SMA(a,n){const o=Array(a.length).fill(null);let s=0;for(let i=0;i<a.length;i++){s+=a[i];if(i>=n)s-=a[i-n];if(i>=n-1)o[i]=s/n}return o}
+function EMA(a,n){const k=2/(n+1),o=[];let e=a[0];for(let i=0;i<a.length;i++){e=i?a[i]*k+e*(1-k):a[0];o.push(e)}return o}
+function calculateRSI(closes, period=14) {
+ const rsi = Array(closes.length).fill(null);
+ if (closes.length < period + 1) return rsi;
+ let gain = 0, loss = 0;
+ for (let i = 1; i <= period; i++) {
+   const diff = closes[i] - closes[i - 1];
+   if (diff > 0) gain += diff;
+   else loss -= diff;
+ }
+ let avgGain = gain / period;
+ let avgLoss = loss / period;
+ rsi[period] = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain / avgLoss));
+ for (let i = period + 1; i < closes.length; i++) {
+   const diff = closes[i] - closes[i - 1];
+   const currGain = diff > 0 ? diff : 0;
+   const currLoss = diff < 0 ? -diff : 0;
+   avgGain = (avgGain * (period - 1) + currGain) / period;
+   avgLoss = (avgLoss * (period - 1) + currLoss) / period;
+   rsi[i] = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain / avgLoss));
+ }
+ return rsi;
+}
+function realizedVol(c,w=30){if(c.length<w+1)return null;const lr=[];for(let i=1;i<c.length;i++)lr.push(Math.log(c[i]/c[i-1]));const r=lr.slice(-w);const m=r.reduce((a,b)=>a+b,0)/r.length;const v=r.reduce((a,b)=>a+(b-m)*(b-m),0)/(r.length-1);return Math.sqrt(v)*Math.sqrt(365)*100}
+
+const state = {
+ price:null,
+ prices:[], daily:[], kpiDaily:[], vols:[], ath:{price:null,date:null}, chartSource:null, lastPrice: null, fullDailyHighs: []
+};
+let ws;
+let redrawTimer;
+let retryDelay = 1000;
+let reconnectTimer = null;
+let lastATHAlert = 0;
+let redrawPending = false;
+
+function getCache(key) {
+ try {
+   const cached = localStorage.getItem('mb_v2_' + key);
+   if (cached) {
+     const { data, timestamp } = JSON.parse(cached);
+     const ttl = (key === 'ath_data') ? ATH_CACHE_TTL : CACHE_TTL;
+     if (Date.now() - timestamp < ttl) return data;
+   }
+   return null;
+ } catch(e) {
+   return null;
+ }
+}
+function setCache(key, data) {
+ try {
+   localStorage.setItem('mb_v2_' + key, JSON.stringify({ data, timestamp: Date.now() }));
+ } catch(e) {
+   
+ }
+}
+
+function drawSeries(ctx, ys, colorVar) {
+ ctx.strokeStyle = getComputedStyle(root).getPropertyValue(colorVar);
+ ctx.lineWidth = 1.6;
+ ctx.beginPath();
+ let started = false;
+ for (let i = 0; i < ys.length; i++) {
+   const v = ys[i];
+   if (v == null) { started = false; continue; }
+   const x = X(i), y = Y(v);
+   if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
+ }
+ ctx.stroke();
+}
+let X, Y; 
+function drawCharts(){
+ redrawPending = false;
+ $('chartLoader').style.display = 'none';
+ const closes = (window._prices||[]).map(a=>a[1]);
+ if(!closes.length) return;
+ const sLen = 50, eLen = 200;
+ const sma = SMA(closes, sLen);
+ const smaLong = SMA(closes, eLen);
+ const valid = closes.filter(v => v != null);
+ if (valid.length === 0) return;
+ const minP = Math.min(...valid);
+ const maxP = Math.max(...valid);
+ const canvas = $('priceCanvas');
+ const ctx = canvas.getContext('2d');
+ const devicePixelRatio = window.devicePixelRatio || 1;
+ canvas.width = canvas.clientWidth * devicePixelRatio;
+ canvas.height = canvas.clientHeight * devicePixelRatio;
+ ctx.scale(devicePixelRatio, devicePixelRatio);
+ ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+ const padL = 36, padR = 10, padT = 10, padB = 20;
+ const w = canvas.clientWidth, h = canvas.clientHeight;
+ const rng = (maxP - minP) || 1;
+ X = i => padL + (w - padL - padR) * (i / (closes.length - 1 || 1));
+ Y = v => h - padB - (h - padT - padB) * ((v - minP) / rng);
+ 
+ ctx.strokeStyle = getComputedStyle(root).getPropertyValue('--border');
+ ctx.lineWidth = 1;
+ ctx.globalAlpha = 0.6;
+ ctx.beginPath();
+ for (let g = 0; g <= 4; g++) {
+   const y = padT + (h - padT - padB) * g / 4;
+   ctx.moveTo(padL, y);
+   ctx.lineTo(w - padR, y);
+ }
+ ctx.stroke();
+ ctx.globalAlpha = 1;
+ 
+ drawSeries(ctx, closes, '--color-price');
+ drawSeries(ctx, sma, '--color-sma');
+ drawSeries(ctx, smaLong, '--color-sma-long');
+ const vols = (window._vols||[]).map(a=>a[1]); drawBars($('volCanvas'), vols);
+ const sTs = window._prices?.[0]?.[0], eTs = window._prices?.at(-1)?.[0];
+ if(sTs && eTs){
+   $('chartMeta').textContent = new Date(sTs).toISOString().slice(0,10) + ' → ' + new Date(eTs).toISOString().slice(0,10) + ` • ${window._prices.length} pts • Coinbase • TF: 1d`;
+   $('volMeta').textContent = 'Coinbase';
+ }
+}
+function drawBars(canvas, ys){
+ const ctx = canvas.getContext('2d');
+ const dpr = window.devicePixelRatio || 1;
+ canvas.width = canvas.clientWidth * dpr;
+ canvas.height = canvas.clientHeight * dpr;
+ ctx.scale(dpr, dpr);
+ ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+ if(!ys.length) return;
+ const padL=36,padR=10,padT=8,padB=16,w=canvas.clientWidth,h=canvas.clientHeight;
+ const max = Math.max(...ys)||1;
+ const X = i => padL + (w-padL-padR)*(i/(ys.length-1||1));
+ const Y = v => h - padB - (h-padT-padB)*(v/max);
+ const bw = Math.max(1, (w-padL-padR)/ys.length*0.8);
+ ctx.fillStyle=getComputedStyle(root).getPropertyValue('--accent');
+ for(let i=0;i<ys.length;i++){ const x=X(i)-bw/2, y=Y(ys[i]); ctx.fillRect(x,y,bw,(h-padB)-y); }
+}
+
+function renderKPIs(){
+ const p = state.price ?? state.daily.at(-1) ?? null;
+ if(p!=null){
+   $('kpiPrice').textContent = fmtUSD(p);
+   $('kpiPrice').classList.remove('skeleton','shimmer');
+   const pct = Math.min(100,(p/MILLION)*100);
+   const pctText = fmtPct(pct);
+   const roundedPct = Math.round(pct);
+   $('kpiPct').textContent = pctText;
+   $('kpiPct').classList.remove('skeleton','shimmer');
+   $('progressFill').style.width = pct+'%';
+   $('progressBar1').setAttribute('aria-valuenow', roundedPct);
+   $('progressBar1').setAttribute('aria-valuetext', pctText);
+   $('progressFill2').style.width = pct+'%';
+   $('progressBar2').setAttribute('aria-valuenow', roundedPct);
+   $('progressBar2').setAttribute('aria-valuetext', pctText);
+   if(state.lastPrice && p > state.lastPrice){
+     $('kpiPrice').style.animation = 'glow 0.5s ease';
+     setTimeout(() => $('kpiPrice').style.animation = '', 500);
+   }
+   state.lastPrice = p;
+ }
+ if(state.kpiDaily.length){
+   const sLen = 50, eLen = 200;
+   const s = SMA(state.kpiDaily, sLen).at(-1), e = SMA(state.kpiDaily, eLen).at(-1);
+   if(s && e){
+     const up = s > e;
+     $('kpiTrend').textContent = up?`Up (Golden Cross)`:`Down (Death Cross)`;
+     $('kpiTrend').style.color = up ? 'var(--good)' : 'var(--bad)';
+     $('kpiTrend').classList.remove('skeleton','shimmer');
+   }
+   const rv = realizedVol(state.kpiDaily,30); $('lblVol').textContent = 'Vol (30D ann., daily closes): ' + (rv?rv.toFixed(1)+'%':'—');
+   const rsiSeries = calculateRSI(state.kpiDaily);
+   const rsi = rsiSeries.at(-1); $('lblRSI').textContent = 'RSI (14D): ' + (rsi ? rsi.toFixed(1) : '—');
+ }
+}
+function renderATH(){
+ if(!state.ath.price) return;
+ $('athNow').textContent = `ATH ${state.ath.date.slice(0,10)} — ${fmtUSD(state.ath.price)}`;
+ const t = $('timeline'); t.innerHTML='';
+ const highs = simpleATHsFromSeries(state.fullDailyHighs);
+ const shown = highs.slice(-8);
+ shown.forEach((h,i)=>{
+   const div=document.createElement('div'); div.className='card';
+   const num = highs.length - (shown.length - 1) + i;
+   div.innerHTML = `<div class="row" style="justify-content:space-between"><strong>ATH #${num}</strong><span class="pill">${h.date}</span></div><div class="value" style="margin-top:4px">${fmtUSD(h.price)}</div>`;
+   t.appendChild(div);
+ });
+}
+function simpleATHsFromSeries(series){
+ const out=[]; let max=-Infinity;
+ for(const [ts,px] of series){ if(px > max+1e-8){ max=px; out.push({date:new Date(ts).toISOString().slice(0,10), price:px}); } }
+ return out;
+}
+
+async function fetchCandles(startISO, endISO, gran){
+ try{
+   const url = `${COINBASE_EXCHANGE}/products/BTC-USD/candles?granularity=${gran}&start=${startISO}&end=${endISO}`;
+   const r = await timeoutFetch(url);
+   if(!r.ok) throw new Error('API error: ' + r.statusText);
+   const data = await r.json();
+   return Array.isArray(data) ? data.reverse() : []; // oldest first
+ }catch(e){
+   console.error('Fetch candles error:', e);
+   return [];
+ }
+}
+async function getHistoricalCandles(startStr, endStr, gran, cacheKey){
+ const cached = getCache(cacheKey);
+ if (cached) return cached;
+ const start = new Date(startStr);
+ const end = new Date(endStr);
+ let data = [];
+ let current = new Date(start);
+ while(current < end){
+   let next = new Date(current.getTime() + 290 * gran * 1000); // 290 chunks
+   if(next > end) next = end;
+   const sISO = current.toISOString();
+   const eISO = next.toISOString();
+   const candles = await fetchCandles(sISO, eISO, gran);
+   data = data.concat(candles);
+   current = new Date(next.getTime() + 1000); // next start after
+ }
+ 
+ data = data.filter((c, i, self) => i === self.findIndex((t) => t[0] === c[0]));
+ setCache(cacheKey, data);
+ return data;
+}
+
+async function getOrderBook(){
+ try {
+   const r = await timeoutFetch(`${COINBASE_EXCHANGE}/products/BTC-USD/book?level=2`);
+   return await r.json();
+ } catch(e) {
+   console.error('Order book error:', e);
+   return null;
+ }
+}
+async function getTrades(){
+ try {
+   const r = await timeoutFetch(`${COINBASE_EXCHANGE}/products/BTC-USD/trades`);
+   return await r.json();
+ } catch(e) {
+   console.error('Trades error:', e);
+   return null;
+ }
+}
+
+async function getAllPrices(){
+ $('priceError').style.display = 'none';
+ try{
+   const j = await timeoutFetch(COINBASE_SPOT).then(r=>r.json());
+   const v = +j?.data?.amount;
+   if(isFinite(v)){
+     state.price = v;
+     $('kpiPrice').textContent = fmtUSD(v);
+     $('kpiPrice').classList.remove('skeleton','shimmer');
+     $('kpiSrc').textContent = 'Source: Coinbase REST';
+     $('kpiSrc').classList.remove('skeleton','shimmer');
+     return v;
+   }else throw new Error('Invalid price data');
+ }catch(e){
+   const msg = e.name === 'AbortError' ? 'Network timeout, try Refresh' : e.message;
+   $('priceError').textContent = 'Price fetch error: ' + msg;
+   $('priceError').style.display = 'block';
+   $('kpiSrc').textContent = 'Source unavailable';
+   $('kpiSrc').classList.remove('skeleton','shimmer');
+ }
+}
+
+function connectWS(){
+ if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+ ws = new WebSocket(WS_ENDPOINT);
+ ws.onopen = () => {
+   if (reconnectTimer) {
+     clearTimeout(reconnectTimer);
+     reconnectTimer = null;
+   }
+   retryDelay = 1000;
+   ws.send(JSON.stringify({
+     type: 'subscribe',
+     product_ids: ['BTC-USD'],
+     channels: ['ticker']
+   }));
+ };
+ ws.onmessage = (e) => {
+   const msg = JSON.parse(e.data);
+   if(msg.type === 'ticker' && msg.product_id === 'BTC-USD'){
+     const p = parseFloat(msg.price);
+     if(isFinite(p)){
+       state.price = p;
+       renderKPIs();
+       $('kpiSrc').textContent = 'Source: Coinbase WS (real-time)';
+       if(state.ath.price !== null && p > state.ath.price){
+         state.ath.price = p;
+         state.ath.date = new Date().toISOString();
+         renderATH();
+         if(Date.now() - lastATHAlert > 60000){
+           showToast('NEW ATH!!!');
+           lastATHAlert = Date.now();
+         }
+       }
+       
+       if(window._prices && window._prices.length){
+         window._prices[window._prices.length - 1][1] = p;
+         state.daily[state.daily.length - 1] = p;
+         clearTimeout(redrawTimer);
+         redrawTimer = setTimeout(drawCharts, 500); // Throttle redraw
+       }
+     }
+   }
+ };
+ ws.onclose = () => {
+   retryDelay = Math.min(retryDelay * 2, 30000);
+   const delay = retryDelay + Math.random() * 1000;
+   reconnectTimer = setTimeout(connectWS, delay);
+ };
+ ws.onerror = () => ws.close();
+}
+
+async function loadChart(){
+ const gran = 86400;
+ const days = 365;
+ const end = new Date();
+ let start = new Date(end.getTime() - days * 86400 * 1000);
+ $('chartLoader').style.display = 'block';
+ const candles = await getHistoricalCandles(start.toISOString(), end.toISOString(), gran, `candles_1d`);
+ $('chartLoader').style.display = 'none';
+ if(candles.length){
+   window._prices = candles.map(c => [c[0] * 1000, c[4]]); // ms, close
+   window._vols = candles.map(c => [c[0] * 1000, c[5]]);
+   state.daily = window._prices.map(p=>p[1]);
+   state.chartSource = 'Coinbase';
+   drawCharts();
+   return true;
+ } else {
+   console.error('No data loaded for chart');
+   return false;
+ }
+}
+
+async function loadKPIData(){
+ const gran = 86400;
+ const days = 365;
+ const end = new Date();
+ const start = new Date(end.getTime() - days * 86400 * 1000);
+ const candles = await getHistoricalCandles(start.toISOString(), end.toISOString(), gran, 'kpi_daily');
+ if(candles.length){
+   state.kpiDaily = candles.map(c => c[4]); // closes
+   return true;
+ } else {
+   console.error('No data loaded for KPIs');
+   return false;
+ }
+}
+
+async function loadATH(){
+ $('athError').style.display = 'none';
+ const cacheKey = 'ath_data';
+ const cached = getCache(cacheKey);
+ if (cached) {
+   state.ath = cached.ath;
+   state.fullDailyHighs = cached.fullDailyHighs;
+   renderATH();
+   return true;
+ }
+ const end = new Date();
+ const start = '2010-07-17T00:00:00Z';
+ const candles = await getHistoricalCandles(start, end.toISOString(), 86400, 'ath_candles');
+ if(candles.length){
+   let maxH = 0, maxD = '';
+   for(const c of candles){
+     if(c[2] > maxH){
+       maxH = c[2];
+       maxD = new Date(c[0]*1000).toISOString();
+     }
+   }
+   state.ath = {price: maxH, date: maxD};
+   state.fullDailyHighs = candles.map(c => [c[0] * 1000, c[2]]); // ts, high
+   setCache(cacheKey, {ath: state.ath, fullDailyHighs: state.fullDailyHighs});
+   renderATH();
+   return true;
+ } else {
+   $('athError').textContent = 'ATH data unavailable';
+   $('athError').style.display = 'block';
+   console.error('No data for ATH');
+   return false;
+ }
+}
+
+async function computeProbIndex(){
+ const btn = $('runProbIndex');
+ btn.disabled = true;
+ $('probIndexError').style.display = 'none';
+ let bookFailed = false, tradesFailed = false;
+ try {
+   const book = await getOrderBook();
+   if(!book) bookFailed = true;
+   const trades = await getTrades();
+   if(!trades) tradesFailed = true;
+   if(bookFailed && tradesFailed){
+     showToast('Live market inputs unavailable; using historical data only.');
+     $('probIndexMeta').textContent = 'Live market inputs unavailable';
+   }
+   const horizons = ['1D', '1W', '1M', '1Y'];
+   const granH = { '1D':300, '1W':3600, '1M':21600, '1Y':86400 };
+   const daysH = { '1D':1, '1W':7, '1M':30, '1Y':365 };
+   const candles = {};
+   let dataAvailable = false;
+   for(const h of horizons) {
+     const end = new Date();
+     const start = new Date(end.getTime() - daysH[h] * 86400 * 1000);
+     candles[h] = await getHistoricalCandles(start.toISOString(), end.toISOString(), granH[h], `candles_prob_${h}`);
+     if(candles[h].length) dataAvailable = true;
+   }
+   if(!dataAvailable) {
+     horizons.forEach(h => {
+       const el = $(`prob${h}`);
+       el.textContent = '—';
+       el.classList.remove('skeleton','shimmer');
+     });
+     $('probIndexMeta').textContent = 'Historical data not available';
+     return;
+   }
+   let ob_imbalance = 1;
+   if(book && book.bids?.length && book.asks?.length) {
+     const bids = book.bids, asks = book.asks;
+     const bestBid = parseFloat(bids[0][0]), bestAsk = parseFloat(asks[0][0]);
+     const mid = (bestBid + bestAsk)/2;
+     let sumB = 0, sumA = 0;
+     for(const b of bids) {
+       const p = parseFloat(b[0]), qty = parseFloat(b[1]);
+       if(p > mid * 0.99) sumB += qty;
+     }
+     for(const a of asks) {
+       const p = parseFloat(a[0]), qty = parseFloat(a[1]);
+       if(p < mid * 1.01) sumA += qty;
+     }
+     ob_imbalance = sumB / (sumA || 1);
+   }
+   ob_imbalance = Number.isFinite(ob_imbalance) ? ob_imbalance : 1;
+   let buyVol = 0, sellVol = 0;
+   if(trades) {
+     const now = Date.now();
+     const last5min = now - 5*60*1000;
+     for(const t of trades) {
+       const time = new Date(t.time).getTime();
+       if(time < last5min) break;
+       if(time >= last5min){
+         const size = parseFloat(t.size);
+         if(t.side === 'buy') buyVol += size;
+         else sellVol += size;
+       }
+     }
+   }
+   let buy_sell_ratio = buyVol / (sellVol || 1);
+   buy_sell_ratio = Number.isFinite(buy_sell_ratio) ? buy_sell_ratio : 1;
+   const features = {};
+   for(const h of horizons) {
+     const cand = candles[h];
+     if(!cand.length) continue;
+     const closes = cand.map(c=>c[4]);
+     const volumes = cand.map(c=>c[5]);
+     const volFast = EMA(volumes, 5).at(-1);
+     const volSlow = EMA(volumes, 20).at(-1);
+     let vol_momentum = volFast / (volSlow || 1);
+     vol_momentum = Number.isFinite(vol_momentum) ? vol_momentum : 1;
+     const tr = [];
+     for(let i=1; i<cand.length; i++) {
+       const high = cand[i][2], low = cand[i][1], cprev = cand[i-1][4];
+       tr.push(Math.max(high-low, Math.abs(high-cprev), Math.abs(low-cprev)));
+     }
+     const atrShort = EMA(tr, 14).at(-1);
+     const atrLong = EMA(tr, 50).at(-1) || atrShort;
+     let atr_ratio = atrShort / (atrLong || 1);
+     atr_ratio = Number.isFinite(atr_ratio) ? atr_ratio : 1;
+     const lookback = Math.min(closes.length, 30);
+     const slice = closes.slice(-lookback);
+     const meanY = slice.reduce((a,b)=>a+b,0)/lookback;
+     const std = Math.sqrt(slice.reduce((a,y)=>a + (y-meanY)**2,0)/ (lookback-1));
+     const x = Array(lookback).fill(0).map((_,i)=>i);
+     const meanX = (lookback-1)/2;
+     const slope = x.reduce((a,xi,i)=>a + (xi-meanX)*(slice[i]-meanY),0) / x.reduce((a,xi)=>a + (xi-meanX)**2,0);
+     let trend_strength = slope / (std / Math.sqrt(lookback));
+     trend_strength = Number.isFinite(trend_strength) ? trend_strength : 0;
+     let depth_1pct = 0;
+     if(book && book.bids?.length && book.asks?.length) {
+       const mid = (parseFloat(book.bids[0][0]) + parseFloat(book.asks[0][0]))/2;
+       let cumQty = 0;
+       const target = mid * 1.01;
+       for(const a of book.asks) {
+         const p = parseFloat(a[0]), qty = parseFloat(a[1]);
+         if(p > target) break;
+         cumQty += qty;
+       }
+       depth_1pct = cumQty * mid;
+     }
+     depth_1pct = Number.isFinite(depth_1pct) ? depth_1pct : 0;
+     features[h] = {ob_imbalance, buy_sell_ratio, vol_momentum, atr_ratio, trend_strength, depth_1pct};
+   }
+   const normF = f => Math.min(1, Math.max(0, (f - 0.5)/1.5));
+   const sigmoid = x => 1 / (1 + Math.exp(-x));
+   const normTrend = t => sigmoid(t);
+   const normDepthInv = d => 1 / (1 + d / 1000000);
+   const scores = {};
+   for(const h of horizons) {
+     const f = features[h] || {};
+     let score = 0;
+     if(h === '1D') {
+       score = 0.35*normF(f.ob_imbalance) + 0.25*normF(f.buy_sell_ratio) + 0.25*normF(f.vol_momentum) + 0.15*normF(f.atr_ratio);
+     } else if(h === '1W') {
+       score = 0.25*normF(f.buy_sell_ratio) + 0.25*normF(f.vol_momentum) + 0.25*normTrend(f.trend_strength) + 0.25*normDepthInv(f.depth_1pct);
+     } else if(h === '1M') {
+       score = 0.35*normF(f.buy_sell_ratio) + 0.25*normTrend(f.trend_strength) + 0.25*normF(f.vol_momentum) + 0.15*normDepthInv(f.depth_1pct);
+     } else if(h === '1Y') {
+       score = 0.50*normTrend(f.trend_strength) + 0.30*normF(f.vol_momentum) + 0.20*normF(f.atr_ratio);
+     }
+     scores[h] = Math.min(100, Math.max(0, score * 100)).toFixed(1);
+   }
+   for(const h of horizons) {
+     const el = $(`prob${h}`);
+     el.textContent = scores[h] || '—';
+     el.classList.remove('skeleton','shimmer');
+   }
+   if(!(bookFailed && tradesFailed)) $('probIndexMeta').textContent = 'Based on market data';
+ } catch(e) {
+   const msg = e.name === 'AbortError' ? 'Network timeout, try Refresh' : e.message;
+   $('probIndexError').textContent = 'Error computing index: ' + msg;
+   $('probIndexError').style.display = 'block';
+ } finally {
+   btn.disabled = false;
+ }
+}
+
+async function loadAll(refresh=false){
+ bar.style.height = '3px';
+ step(0);
+ if (refresh) {
+   Object.keys(localStorage).forEach(key => { if (key.startsWith('mb_v2_')) localStorage.removeItem(key); });
+ }
+ const [price, kpiOK, chartOK, athOK] = await Promise.all([
+   getAllPrices(),
+   loadKPIData(),
+   loadChart(),
+   loadATH()
+ ]);
+ if (kpiOK && chartOK) {
+   renderKPIs();
+   computeProbIndex();
+ }
+ step(100);
+ setTimeout(()=>bar.style.height='0px', 800);
+ connectWS();
+}
+
+function addChartInteractivity() {
+ const canvas = $('priceCanvas');
+ const tooltip = $('chartTooltip');
+ canvas.addEventListener('mousemove', (e) => {
+   if (!window._prices || window._prices.length < 2) return;
+   const closes = window._prices.map(a => a[1]);
+   const sma = SMA(closes, 50);
+   const smaLong = SMA(closes, 200);
+   const rect = canvas.getBoundingClientRect();
+   const x = e.clientX - rect.left;
+   const w = canvas.clientWidth;
+   const padL = 36, padR = 10;
+   if (x < padL || x > w - padR) {
+     tooltip.style.display = 'none';
+     tooltip.setAttribute('aria-hidden', 'true');
+     return;
+   }
+   const len = closes.length;
+   const i = Math.round((x - padL) / ((w - padL - padR) / (len - 1)));
+   if (i < 0 || i >= len) {
+     tooltip.style.display = 'none';
+     tooltip.setAttribute('aria-hidden', 'true');
+     return;
+   }
+   const ts = window._prices[i][0];
+   const price = closes[i];
+   const smaVal = sma[i] !== null ? fmtUSD(sma[i]) : '—';
+   const smaLongVal = smaLong[i] !== null ? fmtUSD(smaLong[i]) : '—';
+   tooltip.innerHTML = `
+     Date: ${new Date(ts).toLocaleString()}<br>
+     Price: ${fmtUSD(price)}<br>
+     SMA(50): ${smaVal}<br>
+     SMA(200): ${smaLongVal}
+   `;
+   tooltip.style.display = 'block';
+   tooltip.setAttribute('aria-hidden', 'false');
+   let ttLeft = e.pageX + 10;
+   let ttTop = e.pageY + 10;
+   const ttWidth = tooltip.offsetWidth;
+   const ttHeight = tooltip.offsetHeight;
+   if (ttLeft + ttWidth > window.innerWidth) ttLeft = window.innerWidth - ttWidth - 10;
+   if (ttTop + ttHeight > window.innerHeight) ttTop = window.innerHeight - ttHeight - 10;
+   tooltip.style.left = `${ttLeft}px`;
+   tooltip.style.top = `${ttTop}px`;
+ });
+ canvas.addEventListener('mouseout', () => {
+   tooltip.style.display = 'none';
+   tooltip.setAttribute('aria-hidden', 'true');
+ });
+}
+
+let activeModal = null;
+let previousFocus = null;
+function openModal(modalId, opener) {
+ previousFocus = opener || document.activeElement;
+ activeModal = $(modalId);
+ activeModal.style.display = 'flex';
+ document.body.style.overflow = 'hidden';
+ const closeBtn = activeModal.querySelector('[id^="close"]');
+ if (closeBtn) closeBtn.focus();
+ activeModal._trapHandler = trapFocus(activeModal);
+}
+function closeModal(modalId) {
+ const modal = $(modalId);
+ if (modal._trapHandler) {
+   modal.removeEventListener('keydown', modal._trapHandler);
+   delete modal._trapHandler;
+ }
+ modal.style.display = 'none';
+ document.body.style.overflow = '';
+ if (previousFocus) previousFocus.focus();
+ activeModal = null;
+ previousFocus = null;
+}
+function trapFocus(modal) {
+ const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+ const first = focusable[0];
+ const last = focusable[focusable.length - 1];
+ const handler = e => {
+   if (e.key === 'Tab') {
+     if (e.shiftKey) {
+       if (document.activeElement === first) {
+         last.focus();
+         e.preventDefault();
+       }
+     } else {
+       if (document.activeElement === last) {
+         first.focus();
+         e.preventDefault();
+       }
+     }
+   }
+ };
+ modal.addEventListener('keydown', handler);
+ return handler;
+}
+function showToast(msg) {
+ const toast = $('toast');
+ toast.textContent = msg;
+ toast.style.display = 'block';
+ setTimeout(() => toast.style.display = 'none', 3000);
+}
+// ====== EVENTS ======
+$('coffeeBtn').addEventListener('click', () => openModal('coffeeModal', $('coffeeBtn')));
+$('closeModal').addEventListener('click', () => closeModal('coffeeModal'));
+$('coffeeModal').addEventListener('click', e=>{ if(e.target.id==='coffeeModal') closeModal('coffeeModal'); });
+$('copyAddr').addEventListener('click', async ()=>{
+ const el = $('btcAddr');
+ const text = el.textContent.trim();
+ try{
+   await navigator.clipboard.writeText(text);
+   $('copyAddr').textContent='Copied!';
+   setTimeout(()=>$('copyAddr').textContent='Copy',1000);
+ }
+ catch{
+   const r=document.createRange(); r.selectNodeContents(el); const s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+   if(document.execCommand('copy')) {
+     $('copyAddr').textContent='Copied!';
+     setTimeout(()=>$('copyAddr').textContent='Copy',1000);
+   } else {
+     alert('Copy failed. Please copy manually.');
+   }
+   s.removeAllRanges();
+ }
+});
+$('btcAddr').textContent = BTC_ADDRESS;
+$('exportBtn').addEventListener('click', () => {
+ if (!window._prices || !window._prices.length) {
+   alert('Data not loaded yet');
+   return;
+ }
+ const closes = window._prices.map(([ts, px]) => px);
+ const smaShort = SMA(closes, 50);
+ const smaLong = SMA(closes, 200);
+ const csv = 'Timestamp,Close,SMA50,SMA200\n' + window._prices.map(([ts, px], i) => `${new Date(ts).toISOString()},${px},${smaShort[i] ?? ''},${smaLong[i] ?? ''}`).join('\n');
+ const blob = new Blob([csv], {type: 'text/csv'});
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = 'btc_data.csv';
+ a.click();
+ URL.revokeObjectURL(url);
+});
+$('refreshBtn').addEventListener('click', () => loadAll(true));
+$('runProbIndex').addEventListener('click', computeProbIndex);
+// Resize listener for charts
+window.addEventListener('resize', () => {
+ if (redrawPending) return;
+ redrawPending = true;
+ requestAnimationFrame(drawCharts);
+});
+$('disclaimerLink').addEventListener('click', () => openModal('disclaimerModal', $('disclaimerLink')));
+$('closeDisclaimer').addEventListener('click', () => closeModal('disclaimerModal'));
+$('disclaimerModal').addEventListener('click', e=>{ if(e.target.id==='disclaimerModal') closeModal('disclaimerModal'); });
+$('docBtn').addEventListener('click', () => openModal('docModal', $('docBtn')));
+$('closeDoc').addEventListener('click', () => closeModal('docModal'));
+$('docModal').addEventListener('click', e=>{ if(e.target.id==='docModal') closeModal('docModal'); });
+document.addEventListener('keydown', e => {
+ if(e.key === 'Escape' && activeModal){
+   closeModal(activeModal.id);
+ }
+});
+window.addEventListener('beforeunload', () => {
+ if (ws) ws.close();
+ if (reconnectTimer) clearTimeout(reconnectTimer);
+});
+// ====== INIT ======
+(function init(){
+ setCopy(savedTheme);
+ setDocs(savedTheme);
+ loadAll();
+ addChartInteractivity();
+})();
+</script>
 </body>
 </html>
